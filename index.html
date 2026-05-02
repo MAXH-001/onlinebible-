@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scripture Reader</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0c0a08;
+    --surface: #141210;
+    --surface2: #1e1a16;
+    --border: #2e2820;
+    --gold: #c9a84c;
+    --gold2: #e8c97a;
+    --cream: #f0e8d8;
+    --muted: #7a6e60;
+    --text: #e8ddd0;
+    --accent: #8b4513;
+    --header-bg: rgba(12,10,8,0.95);
+  }
+
+  [data-theme="light"] {
+    --bg: #f7f2e8;
+    --surface: #ede5d4;
+    --surface2: #e3d9c6;
+    --border: #c8bda8;
+    --gold: #8a6a1e;
+    --gold2: #a07c2a;
+    --cream: #1e1608;
+    --muted: #8a7d6a;
+    --text: #2e2410;
+    --accent: #8b4513;
+    --header-bg: rgba(247,242,232,0.95);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Crimson Pro', Georgia, serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      radial-gradient(ellipse at 20% 50%, rgba(201,168,76,0.03) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 20%, rgba(139,69,19,0.04) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--header-bg);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+  }
+
+  .header-top {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 0;
+    flex-wrap: wrap;
+  }
+
+  .logo {
+    font-family: 'Cinzel', serif;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--gold);
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+  }
+
+  .logo span {
+    color: var(--muted);
+    font-weight: 400;
+    font-size: 0.9rem;
+  }
+
+  .nav-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 0;
+    flex-wrap: wrap;
+    border-top: 1px solid var(--border);
+  }
+
+  select, input[type="text"] {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'Crimson Pro', serif;
+    font-size: 0.95rem;
+    padding: 7px 12px;
+    border-radius: 4px;
+    outline: none;
+    cursor: pointer;
+    transition: border-color 0.2s;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+
+  select:focus, input[type="text"]:focus {
+    border-color: var(--gold);
+  }
+
+  select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%237a6e60'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 28px;
+  }
+
+  .version-badge {
+    font-family: 'Cinzel', serif;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    background: linear-gradient(135deg, var(--gold), var(--gold2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    padding: 0 4px;
+  }
+
+  .sep { color: var(--border); font-size: 1.2rem; }
+
+  #chapterSelect {
+    min-width: 68px;
+    font-size: 1rem;
+    padding: 8px 28px 8px 12px;
+    font-weight: 600;
+  }
+
+  #verseSelect {
+    min-width: 68px;
+    font-size: 1rem;
+    padding: 8px 28px 8px 12px;
+    font-weight: 600;
+  }
+
+  .theme-toggle {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: border-color 0.2s, background 0.2s;
+    flex-shrink: 0;
+    margin-left: auto;
+    padding: 0;
+  }
+  .theme-toggle:hover { border-color: var(--gold); background: var(--surface); }
+
+  .search-wrap { position: relative; flex: 1; min-width: 0; }
+  .search-wrap input { width: 100%; padding-left: 32px; }
+  .search-icon {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--muted);
+    font-size: 0.85rem;
+    pointer-events: none;
+  }
+
+  .container {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 48px 24px 80px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .reference-heading {
+    font-family: 'Cinzel', serif;
+    font-size: 1.6rem;
+    font-weight: 600;
+    color: var(--gold);
+    letter-spacing: 0.05em;
+    margin-bottom: 4px;
+    animation: fadeSlide 0.4s ease;
+  }
+
+  .reference-sub {
+    font-size: 0.9rem;
+    color: var(--muted);
+    margin-bottom: 36px;
+    font-style: italic;
+    animation: fadeSlide 0.4s ease 0.05s both;
+  }
+
+  .ornament {
+    text-align: center;
+    margin: 28px 0;
+    color: var(--gold);
+    font-size: 1.1rem;
+    letter-spacing: 0.3em;
+    opacity: 0.5;
+  }
+
+  .verses-wrap { animation: fadeSlide 0.35s ease; }
+
+  .verse {
+    display: flex;
+    gap: 14px;
+    line-height: 1.85;
+    font-size: 1.12rem;
+    font-weight: 300;
+    transition: background 0.15s;
+    border-radius: 4px;
+    padding: 4px 8px;
+    margin: 0 -8px;
+  }
+
+  .verse:hover { background: rgba(201,168,76,0.04); }
+
+  .verse.highlight {
+    background: rgba(201,168,76,0.1);
+    border-left: 2px solid var(--gold);
+    padding-left: 10px;
+  }
+
+  .verse-num {
+    font-family: 'Cinzel', serif;
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: var(--gold);
+    min-width: 26px;
+    padding-top: 6px;
+    letter-spacing: 0.05em;
+    user-select: none;
+    opacity: 0.8;
+  }
+
+  .verse-text { flex: 1; color: var(--cream); }
+  .verse-text em { font-style: italic; color: var(--text); }
+
+  /* Footnote asterisk styling */
+  .verse-text .fn-mark {
+    font-size: 0.65rem;
+    color: var(--gold);
+    vertical-align: super;
+    margin-left: 1px;
+    font-family: 'Cinzel', serif;
+  }
+
+  .chapter-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 48px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+  }
+
+  .nav-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: 'Crimson Pro', serif;
+    font-size: 0.95rem;
+    padding: 8px 18px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .nav-btn:hover { border-color: var(--gold); color: var(--gold); }
+  .nav-btn:disabled { opacity: 0.3; cursor: default; }
+
+  .state-msg {
+    text-align: center;
+    padding: 80px 0;
+    color: var(--muted);
+    font-size: 1.1rem;
+    font-style: italic;
+  }
+
+  .state-msg .big {
+    font-family: 'Cinzel', serif;
+    font-size: 2rem;
+    color: var(--border);
+    display: block;
+    margin-bottom: 12px;
+  }
+
+  .search-results { animation: fadeSlide 0.3s ease; }
+
+  .search-result-item {
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+  }
+
+  .search-result-item:hover { border-color: var(--gold); background: var(--surface2); }
+
+  .result-ref {
+    font-family: 'Cinzel', serif;
+    font-size: 0.75rem;
+    color: var(--gold);
+    letter-spacing: 0.08em;
+    margin-bottom: 4px;
+  }
+
+  .result-text { font-size: 1rem; color: var(--text); line-height: 1.6; }
+
+  .result-text mark {
+    background: rgba(201,168,76,0.25);
+    color: var(--gold2);
+    border-radius: 2px;
+    padding: 0 2px;
+  }
+
+  .result-count {
+    font-family: 'Cinzel', serif;
+    font-size: 0.75rem;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+    margin-bottom: 20px;
+  }
+
+  .spinner {
+    display: inline-block;
+    width: 20px; height: 20px;
+    border: 2px solid var(--border);
+    border-top-color: var(--gold);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    margin-right: 8px;
+    vertical-align: middle;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes fadeSlide {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+  @media (max-width: 600px) {
+    .nav-row { gap: 6px; }
+    select, input { font-size: 0.85rem; padding: 6px 8px; }
+    .search-wrap input { width: 100%; }
+    .container { padding: 24px 16px 60px; }
+    .reference-heading { font-size: 1.3rem; }
+    .verse { font-size: 1rem; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-top">
+    <div class="logo">✦ Scripture <span>Reader</span></div>
+    <select id="versionSelect" onchange="onVersionChange(currentBook, currentChapter)">
+      <option value="">— Select Version —</option>
+    </select>
+    <span id="versionBadge" class="version-badge"></span>
+    <div class="search-wrap">
+      <span class="search-icon">⌕</span>
+      <input type="text" id="searchInput" placeholder="Search scriptures…" oninput="onSearch()" autocomplete="off">
+    </div>
+    <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle light/dark theme">🌙</button>
+  </div>
+  <div class="nav-row">
+    <select id="bookSelect" onchange="onBookChange()" disabled>
+      <option value="">Book</option>
+    </select>
+    <span class="sep">›</span>
+    <select id="chapterSelect" onchange="onChapterChange()" disabled>
+      <option value="">Ch</option>
+    </select>
+    <span class="sep">›</span>
+    <select id="verseSelect" onchange="onVerseJump()" disabled>
+      <option value="">Vs</option>
+    </select>
+  </div>
+</header>
+
+<div class="container" id="mainContainer">
+  <div class="state-msg">
+    <span class="big">✦</span>
+    Select a version to begin reading
+  </div>
+</div>
+
+<script>
+// ── Theme ─────────────────────────────────────────────────────
+function toggleTheme() {
+  const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+  const next = isLight ? 'dark' : 'light';
+  document.documentElement.setAttribute('data-theme', next);
+  document.getElementById('themeToggle').textContent = next === 'light' ? '☀️' : '🌙';
+  localStorage.setItem('sr-theme', next);
+}
+
+// ── Config ──────────────────────────────────────────────────
+const VERSIONS = [
+  { id: 'AMP2015',  label: 'AMP',   name: 'Amplified Bible (2015)' },
+  { id: 'AMPC1987', label: 'AMPC',  name: 'Amplified Bible Classic (1987)' },
+  { id: 'ASV1901',  label: 'ASV',   name: 'American Standard Version (1901)' },
+  { id: 'CEV1995',  label: 'CEV',   name: 'Contemporary English Version (1995)' },
+  { id: 'CJB1998',  label: 'CJB',   name: 'Complete Jewish Bible (1998)' },
+  { id: 'CSB2017',  label: 'CSB',   name: 'Christian Standard Bible (2017)' },
+  { id: 'DBY1890',  label: 'DBY',   name: 'Darby Translation (1890)' },
+  { id: 'ERV2005',  label: 'ERV',   name: 'Easy-to-Read Version (2005)' },
+  { id: 'ESV2016',  label: 'ESV',   name: 'English Standard Version (2016)' },
+  { id: 'GNT1976',  label: 'GNT',   name: 'Good News Translation (1976)' },
+  { id: 'HCSB2009', label: 'HCSB',  name: 'Holman Christian Standard (2009)' },
+  { id: 'ISV2011',  label: 'ISV',   name: 'International Standard Version (2011)' },
+  { id: 'KJV1769',  label: 'KJV',   name: 'King James Version (1769)' },
+  { id: 'MNT1913',  label: 'MNT',   name: 'Moffatt New Testament (1913)' },
+  { id: 'MSG2018',  label: 'MSG',   name: 'The Message (2018)' },
+  { id: 'NASB2020', label: 'NASB',  name: 'New American Standard (2020)' },
+  { id: 'NCV2005',  label: 'NCV',   name: 'New Century Version (2005)' },
+  { id: 'NET2007',  label: 'NET',   name: 'New English Translation (2007)' },
+  { id: 'NIV2011',  label: 'NIV',   name: 'New International Version (2011)' },
+  { id: 'NKJV1982', label: 'NKJV',  name: 'New King James Version (1982)' },
+  { id: 'Phi1958',  label: 'PHI',   name: 'J.B. Phillips NT (1958)' },
+  { id: 'TLB1971',  label: 'TLB',   name: 'The Living Bible (1971)' },
+  { id: 'TPT2025',  label: 'TPT',   name: 'The Passion Translation (2025)' },
+  { id: 'WEB2000',  label: 'WEB',   name: 'World English Bible (2000)' },
+  { id: 'YLT1898',  label: 'YLT',   name: "Young's Literal Translation (1898)" },
+  { id: 'RSV2006',  label: 'RSV',   name: 'Revised Standard Version (2006)', adapter: 'rsv' },
+];
+
+// ── State ────────────────────────────────────────────────────
+let db = null;
+let currentVersion = null;
+let currentBook = null;
+let currentChapter = 1;
+let searchTimeout = null;
+
+let bookNumToName = {};
+let bookNameToNum = {};
+
+// ── Boot ─────────────────────────────────────────────────────
+(function init() {
+  // Restore saved theme
+  const savedTheme = localStorage.getItem('sr-theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', savedTheme);
+  document.getElementById('themeToggle').textContent = savedTheme === 'light' ? '☀️' : '🌙';
+
+  const sel = document.getElementById('versionSelect');
+  VERSIONS.forEach(v => {
+    const opt = document.createElement('option');
+    opt.value = v.id;
+    opt.textContent = `${v.label} — ${v.name}`;
+    sel.appendChild(opt);
+  });
+
+  const params = new URLSearchParams(location.search);
+  const ver = params.get('v');
+  const book = params.get('b');
+  const ch = parseInt(params.get('c')) || 1;
+  if (ver) {
+    sel.value = ver;
+    onVersionChange(book, ch);
+  }
+})();
+
+// ── Version Loading ───────────────────────────────────────────
+function onVersionChange(restoreBook, restoreCh) {
+  const id = document.getElementById('versionSelect').value;
+  if (!id) return;
+  currentVersion = VERSIONS.find(v => v.id === id);
+  document.getElementById('versionBadge').textContent = currentVersion.label;
+
+  ['bookSelect','chapterSelect','verseSelect'].forEach(sid => {
+    const el = document.getElementById(sid);
+    el.innerHTML = `<option value="">${sid === 'bookSelect' ? 'Book' : sid === 'chapterSelect' ? 'Ch' : 'Vs'}</option>`;
+    el.disabled = true;
+  });
+
+  showLoading(`Loading ${currentVersion.label}…`);
+
+  fetch(`assets/${id}.json`)
+    .then(r => {
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return r.json();
+    })
+    .then(data => {
+      // RSV has a different raw structure — normalise it into {Bible, Structure}
+      if (currentVersion.adapter === 'rsv') {
+        db = normaliseRSV(data);
+      } else {
+        db = data;
+      }
+      buildBookMaps();
+      populateBooks(restoreBook, restoreCh);
+    })
+    .catch(err => {
+      showError(`Could not load ${id}.json — make sure it's in the assets/ folder.`);
+      console.error(err);
+    });
+}
+
+// ── RSV Adapter ───────────────────────────────────────────────
+// RSV2006.json comes from a SQLite export with tables:
+//   books:  { number, osis, human, chapters }
+//   verses: { id, book (osis code), verse (float: ch.vvv), unformatted }
+// We normalise these into the same {Bible, Structure} shape the rest of
+// the reader already understands — zero changes to any other function.
+function normaliseRSV(raw) {
+  // RSV2006.json is already exported in normalised form
+  return { Structure: raw.Structure, Bible: raw.Bible };
+}
+
+// ── Book Map Builder ──────────────────────────────────────────
+function buildBookMaps() {
+  bookNumToName = {};
+  bookNameToNum = {};
+
+  const structure = db.Structure || [];
+
+  if (structure.length) {
+    structure.forEach(r => {
+      const numA = parseInt(r.BibPosition || r.bibposition || 0);
+      const nameA = r.DisplayTitle || r.FullTitle || r.ListTitle || r.listTitle || r.displayTitle || '';
+
+      const numB = parseInt(r.BookNum || r.booknum || r.book_num || r.Num || r.num || 0);
+      const nameB = r.BookName || r.bookname || r.book_name || r.Name || r.name || '';
+
+      const num  = numA || numB;
+      const name = nameA || nameB;
+
+      if (num && name) {
+        bookNumToName[num]  = name;
+        bookNameToNum[name] = num;
+      }
+    });
+  }
+
+  if (!Object.keys(bookNumToName).length) {
+    const seen = new Set();
+    (db.Bible || []).forEach(v => {
+      const raw = v.BookName || v.bookname || v.book_name || v.Book || v.book;
+      if (raw === undefined || raw === null) return;
+      const asInt = parseInt(raw);
+      if (!isNaN(asInt) && String(asInt) === String(raw)) {
+        if (!seen.has(asInt)) {
+          seen.add(asInt);
+          bookNumToName[asInt]  = `Book ${asInt}`;
+          bookNameToNum[`Book ${asInt}`] = asInt;
+        }
+      } else {
+        const name = String(raw);
+        if (!seen.has(name)) {
+          seen.add(name);
+          const idx = Object.keys(bookNumToName).length + 1;
+          bookNumToName[idx]   = name;
+          bookNameToNum[name]  = idx;
+        }
+      }
+    });
+  }
+}
+
+// ── Resolve a verse's book to a display name ──────────────────
+function verseBookName(v) {
+  const raw = v.BookName || v.bookname || v.book_name || v.Book || v.book;
+  if (raw === undefined || raw === null) return '';
+  const asInt = parseInt(raw);
+  if (!isNaN(asInt) && String(asInt) === String(raw)) {
+    return bookNumToName[asInt] || `Book ${asInt}`;
+  }
+  return String(raw);
+}
+
+// ── Book Population ───────────────────────────────────────────
+function populateBooks(restoreBook, restoreCh) {
+  const bookSel = document.getElementById('bookSelect');
+  bookSel.innerHTML = '<option value="">— Select Book —</option>';
+
+  const sorted = Object.keys(bookNumToName)
+    .map(k => ({ num: parseInt(k), name: bookNumToName[k] }))
+    .sort((a, b) => a.num - b.num);
+
+  sorted.forEach(b => {
+    const opt = document.createElement('option');
+    opt.value = b.name;
+    opt.textContent = b.name;
+    bookSel.appendChild(opt);
+  });
+
+  bookSel.disabled = false;
+
+  if (restoreBook && bookNameToNum[restoreBook]) {
+    bookSel.value = restoreBook;
+    onBookChange(restoreCh);
+  } else {
+    document.getElementById('mainContainer').innerHTML = `
+      <div class="state-msg">
+        <span class="big">✦</span>
+        Now select a <strong style="color:var(--gold)">Book</strong> to read
+      </div>`;
+  }
+}
+
+// ── Chapter Population ────────────────────────────────────────
+function onBookChange(restoreCh) {
+  const bookSel = document.getElementById('bookSelect');
+  currentBook = bookSel.value;
+  if (!currentBook) return;
+
+  const chapSel = document.getElementById('chapterSelect');
+  chapSel.innerHTML = '<option value="">— Ch —</option>';
+  document.getElementById('verseSelect').innerHTML = '<option value="">Vs</option>';
+  document.getElementById('verseSelect').disabled = true;
+
+  const chapters = getChapters(currentBook);
+  chapters.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c; opt.textContent = c;
+    chapSel.appendChild(opt);
+  });
+  chapSel.disabled = false;
+
+  if (restoreCh) {
+    currentChapter = restoreCh;
+    chapSel.value = currentChapter;
+    onChapterChange();
+  } else {
+    document.getElementById('mainContainer').innerHTML = `
+      <div class="state-msg">
+        <span class="big">✦</span>
+        Now select a <strong style="color:var(--gold)">Chapter</strong>
+      </div>`;
+  }
+}
+
+function getChapters(bookName) {
+  const bookNum = bookNameToNum[bookName];
+  const nums = new Set();
+  (db.Bible || []).forEach(v => {
+    const vBookRaw = v.BookName || v.bookname || v.book_name || v.Book || v.book;
+    const vNum     = parseInt(v.BookNum || v.booknum || v.book_num || 0);
+    const match = (bookNum && vNum)
+      ? vNum === bookNum
+      : String(vBookRaw) === bookName;
+    if (match) {
+      const c = parseInt(v.Chapter || v.chapter || v.ChapterNum || 0);
+      if (c) nums.add(c);
+    }
+  });
+  return Array.from(nums).sort((a, b) => a - b);
+}
+
+// ── Verse Population ──────────────────────────────────────────
+function onChapterChange() {
+  const chapSel = document.getElementById('chapterSelect');
+  currentChapter = parseInt(chapSel.value) || 0;
+  if (!currentChapter) return;
+
+  const verseSel = document.getElementById('verseSelect');
+  verseSel.innerHTML = '<option value="">Vs</option>';
+
+  const verses = getVerses(currentBook, currentChapter);
+  verses.forEach(v => {
+    const opt = document.createElement('option');
+    opt.value = v.num; opt.textContent = v.num;
+    verseSel.appendChild(opt);
+  });
+  verseSel.disabled = false;
+
+  renderChapter(verses);
+  updateURL();
+}
+
+function onVerseJump() {
+  const vn = parseInt(document.getElementById('verseSelect').value);
+  if (!vn) return;
+  const el = document.getElementById(`v${vn}`);
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    document.querySelectorAll('.verse').forEach(e => e.classList.remove('highlight'));
+    el.classList.add('highlight');
+  }
+}
+
+function getVerses(bookName, chapter) {
+  const bookNum = bookNameToNum[bookName];
+  return (db.Bible || [])
+    .filter(v => {
+      const vBookRaw = v.BookName || v.bookname || v.book_name || v.Book || v.book;
+      const vNum     = parseInt(v.BookNum || v.booknum || v.book_num || 0);
+      const bookMatch = (bookNum && vNum)
+        ? vNum === bookNum
+        : String(vBookRaw) === bookName;
+      const c = parseInt(v.Chapter || v.chapter || v.ChapterNum || 0);
+      return bookMatch && c === chapter;
+    })
+    .map(v => ({
+      num:  parseInt(v.Verse || v.verse || v.VerseNum || 0),
+      text: v.Scripture || v.scripture || v.Text || v.text || v.VerseText || ''
+    }))
+    .sort((a, b) => a.num - b.num);
+}
+
+// ── Render ────────────────────────────────────────────────────
+function renderChapter(verses) {
+  const container = document.getElementById('mainContainer');
+  if (!verses.length) {
+    showError('No verses found for this selection.');
+    return;
+  }
+
+  const versionName = currentVersion ? currentVersion.name : '';
+  const chapters = getChapters(currentBook);
+  const chIdx = chapters.indexOf(currentChapter);
+
+  let html = `
+    <div class="reference-heading">${escapeHtml(currentBook)} ${currentChapter}</div>
+    <div class="reference-sub">${escapeHtml(versionName)}</div>
+    <div class="verses-wrap">
+  `;
+
+  verses.forEach(v => {
+    html += `
+      <div class="verse" id="v${v.num}">
+        <span class="verse-num">${v.num}</span>
+        <span class="verse-text">${renderVerseText(v.text)}</span>
+      </div>
+    `;
+  });
+
+  html += `</div>
+    <div class="ornament">✦ ✦ ✦</div>
+    <div class="chapter-nav">
+      <button class="nav-btn" onclick="prevChapter()" ${chIdx <= 0 ? 'disabled' : ''}>
+        ← ${chIdx > 0 ? escapeHtml(currentBook) + ' ' + chapters[chIdx - 1] : 'Previous'}
+      </button>
+      <span style="color:var(--muted);font-size:0.85rem;font-family:'Cinzel',serif;letter-spacing:0.05em">
+        CH ${currentChapter} / ${chapters.length}
+      </span>
+      <button class="nav-btn" onclick="nextChapter()" ${chIdx >= chapters.length - 1 ? 'disabled' : ''}>
+        ${chIdx < chapters.length - 1 ? escapeHtml(currentBook) + ' ' + chapters[chIdx + 1] : 'Next'} →
+      </button>
+    </div>
+  `;
+
+  container.innerHTML = html;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function prevChapter() {
+  const chapters = getChapters(currentBook);
+  const idx = chapters.indexOf(currentChapter);
+  if (idx > 0) {
+    currentChapter = chapters[idx - 1];
+    document.getElementById('chapterSelect').value = currentChapter;
+    onChapterChange();
+  }
+}
+
+function nextChapter() {
+  const chapters = getChapters(currentBook);
+  const idx = chapters.indexOf(currentChapter);
+  if (idx < chapters.length - 1) {
+    currentChapter = chapters[idx + 1];
+    document.getElementById('chapterSelect').value = currentChapter;
+    onChapterChange();
+  }
+}
+
+// ── Search ────────────────────────────────────────────────────
+function onSearch() {
+  clearTimeout(searchTimeout);
+  const q = document.getElementById('searchInput').value.trim();
+  if (!q || !db) return;
+  if (q.length < 3) {
+    if (!q && currentBook && currentChapter) renderChapter(getVerses(currentBook, currentChapter));
+    return;
+  }
+  searchTimeout = setTimeout(() => doSearch(q), 300);
+}
+
+function doSearch(q) {
+  const container = document.getElementById('mainContainer');
+  const lower = q.toLowerCase();
+  const results = (db.Bible || [])
+    .filter(v => {
+      const t = v.Scripture || v.scripture || v.Text || v.text || v.VerseText || '';
+      return stripTags(t).toLowerCase().includes(lower);
+    })
+    .slice(0, 100);
+
+  if (!results.length) {
+    container.innerHTML = `<div class="state-msg"><span class="big">∅</span>No results for "${escapeHtml(q)}"</div>`;
+    return;
+  }
+
+  const re = new RegExp(`(${escapeRe(q)})`, 'gi');
+  let html = `<div class="search-results">
+    <div class="reference-heading">Search Results</div>
+    <div class="result-count">${results.length}${results.length === 100 ? '+' : ''} verses matching "${escapeHtml(q)}"</div>
+  `;
+
+  results.forEach(v => {
+    const book = verseBookName(v);
+    const ch   = v.Chapter || v.chapter || v.ChapterNum || '';
+    const vs   = v.Verse || v.verse || v.VerseNum || '';
+    const text = v.Scripture || v.scripture || v.Text || v.text || v.VerseText || '';
+    const plainText = stripTags(text);
+    const highlighted = escapeHtml(plainText).replace(re, '<mark>$1</mark>');
+
+    html += `<div class="search-result-item" onclick="goToVerse('${escapeHtml(book)}', ${ch}, ${vs})">
+      <div class="result-ref">${escapeHtml(book)} ${ch}:${vs}</div>
+      <div class="result-text">${highlighted}</div>
+    </div>`;
+  });
+
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+function goToVerse(book, ch, vs) {
+  document.getElementById('searchInput').value = '';
+  document.getElementById('bookSelect').value = book;
+  currentBook = book;
+  onBookChange(parseInt(ch));
+  setTimeout(() => {
+    document.getElementById('verseSelect').value = vs;
+    onVerseJump();
+  }, 300);
+}
+
+// ── URL Sync ──────────────────────────────────────────────────
+function updateURL() {
+  const verId = document.getElementById('versionSelect').value;
+  const params = new URLSearchParams({ v: verId, b: currentBook, c: currentChapter });
+  history.replaceState(null, '', '?' + params.toString());
+}
+
+// ── Helpers ───────────────────────────────────────────────────
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function escapeRe(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// Render verse text: safely handles HTML-encoded tags in verse data
+// Supports <br>, <i>/<em>/<b>, and MSG-style padding spans
+function renderVerseText(raw) {
+  // 1. Escape everything
+  let s = String(raw)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+
+  // 2. Restore safe italic/bold tags
+  s = s.replace(/&lt;i&gt;/gi, '<em>').replace(/&lt;\/i&gt;/gi, '</em>');
+  s = s.replace(/&lt;em&gt;/gi, '<em>').replace(/&lt;\/em&gt;/gi, '</em>');
+  s = s.replace(/&lt;b&gt;/gi, '<strong>').replace(/&lt;\/b&gt;/gi, '</strong>');
+
+  // 3. Restore <br> line breaks
+  s = s.replace(/&lt;br\s*\/?&gt;/gi, '<br>');
+
+  // 3b. Strip <p> paragraph tags (treat closing </p> as a line break)
+  s = s.replace(/&lt;\/p&gt;/gi, '<br>');
+  s = s.replace(/&lt;p[^&]*&gt;/gi, '');
+
+  // 4. Convert padding spans (MSG/TPT-style poetic indents) to visual indent
+  s = s.replace(/&lt;span\s+style='padding:[^']*;'&gt;&lt;\/span&gt;/gi, '&nbsp;&nbsp;&nbsp;');
+  s = s.replace(/&lt;span\s+style="padding:[^"]*;"&gt;&lt;\/span&gt;/gi, '&nbsp;&nbsp;&nbsp;');
+  // Strip any remaining span tags
+  s = s.replace(/&lt;span[^&]*&gt;/gi, '').replace(/&lt;\/span&gt;/gi, '');
+
+  // 5. Style asterisk footnote markers
+  s = s.replace(/\*/g, '<span class="fn-mark">*</span>');
+
+  return s;
+}
+
+// Strip all HTML tags (for search snippets)
+function stripTags(s) {
+  return String(s).replace(/<[^>]*>/g, '');
+}
+
+function showLoading(msg) {
+  document.getElementById('mainContainer').innerHTML =
+    `<div class="state-msg"><span class="spinner"></span>${msg}</div>`;
+}
+
+function showError(msg) {
+  document.getElementById('mainContainer').innerHTML =
+    `<div class="state-msg"><span class="big">⚠</span>${escapeHtml(msg)}</div>`;
+}
+</script>
+</body>
+</html>
